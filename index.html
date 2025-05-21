@@ -457,9 +457,13 @@
                                 <div class="flex-1">
                                     <label class="block mb-1 font-medium">Datos (CSV o JSON):</label>
                                     <textarea id="chart-data" rows="3" class="w-full p-2 border rounded-md font-mono"
-                                        placeholder="Ej: 1,2,3,4 o [{" x":1,"y":2},…]"></textarea>
+                                        placeholder="Ej: 1,2,3,4 o [{&quot;x&quot;:1,&quot;y&quot;:2},…]"></textarea>
                                 </div>
                             </div>
+                            <!-- Botón para calcular la gráfica 2D -->
+                            <button id="plot2d-btn" class="w-full p-3 bg-green-500 text-white rounded-md mb-4">
+                                Calcular Gráfica 2D
+                            </button>
                             <!-- Canvas Container -->
                             <div class="relative">
                                 <canvas id="plot2d-canvas"
@@ -1552,6 +1556,13 @@
 
             // event listeners
             [typeSel, dataInput].forEach(el => el.addEventListener('change', renderChart));
+
+            // AGREGA ESTE BLOQUE para el botón:
+            const plot2dBtn = document.getElementById('plot2d-btn');
+            if (plot2dBtn) {
+                plot2dBtn.addEventListener('click', renderChart);
+            }
+
             // initial draw
             renderChart();
         }

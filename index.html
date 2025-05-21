@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calculadora Avanzada</title>
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Estilos -->
+    <style id="app-style" defer>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #93c5fd;
+            --background-color: #ffffff;
+            --text-color: #1e293b;
+            --button-hover: #2563eb;
+            --button-active: #1d4ed8;
+            --input-bg: #f1f5f9;
+            --border-color: #cbd5e1;
+            --history-bg: #f8fafc;
+        }
+
+        .dark-theme {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #1e293b;
+            --text-color: #f1f5f9;
+            --button-hover: #1d4ed8;
+            --button-active: #1e40af;
+            --input-bg: #334155;
+            --border-color: #475569;
+            --history-bg: #0f172a;
+        }
+
+        .high-contrast-theme {
+            --primary-color: #ffff00;
+            --secondary-color: #ffff00;
+            --background-color: #000000;
+            --text-color: #ffffff;
+            --button-hover: #ff9900;
+            --button-active: #ff6600;
+            --input-bg: #333333;
+            --border-color: #ffff00;
+            --history-bg: #222222;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .calc-button {
+            transition: all 0.2s;
+        }
+
+        .calc-button:hover {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        .calc-button:active {
+            background-color: var(--button-active);
+            transform: translateY(0);
+        }
+
+        .tab-active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        input,
+        select,
+        textarea {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .history-panel {
+            background-color: var(--history-bg);
+        }
+
+        .dropdown-menu {
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+        }
+
+        .dropdown-menu.open {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 10px;
+            background: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .calc-display {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Estilos para el spinner de carga */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .matrix-container {
+            overflow-x: auto;
+        }
+
+        .matrix-input {
+            min-width: 50px;
+            max-width: 60px;
+            padding: 5px;
+            text-align: center;
+        }
+    </style>
+
+</head>
+
+<body class="min-h-screen flex flex-col">
+    <div class="container mx-auto px-2 py-2 max-w-full flex-grow flex flex-col">
+        <!-- Título y menú desplegable -->
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold">Calculadora Avanzada</h1>
+
+            <div class="relative inline-block" id="menu-dropdown">
+                <button id="dropdown-toggle"
+                    class="flex items-center space-x-2 p-2 rounded-md border border-gray-300 bg-blue-500 text-white">
+                    <span>Menú</span>
+                    <i class="fas fa-caret-down"></i>
+                </button>
+
+                <div id="dropdown-menu"
+                    class="dropdown-menu absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-10">
+                    <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+                        <div class="mb-3">
+                            <label class="block mb-2 text-sm font-medium">Tema</label>
+                            <select id="theme-selector" class="w-full p-2 rounded-md">
+                                <option value="light">Claro</option>
+                                <option value="dark">Oscuro</option>
+                                <option value="high-contrast">Alto contraste</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="block mb-2 text-sm font-medium">Tamaño del texto</label>
+                            <select id="font-size-selector" class="w-full p-2 rounded-md">
+                                <option value="normal">Normal</option>
+                                <option value="large">Grande</option>
+                                <option value="x-large">Extra grande</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="block mb-2 text-sm font-medium">Decimal</label>
+                            <select id="decimal-precision" class="w-full p-2 rounded-md">
+                                <option value="0">0 decimales</option>
+                                <option value="2" selected>2 decimales</option>
+                                <option value="4">4 decimales</option>
+                                <option value="6">6 decimales</option>
+                                <option value="8">8 decimales</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-4 flex-grow min-h-0">
+            <!-- Panel principal -->
+            <main class="flex-grow min-w-0">
+                <!-- Pestaña selectora de operaciones -->
+                <div class="tabs overflow-x-auto whitespace-nowrap mb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div class="inline-flex">
+                        <button class="calc-tab tab-active px-4 py-2 text-sm font-medium rounded-t-lg"
+                            data-tab="basic">Básica</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="matrices">Matrices</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium"
+                            data-tab="polynomials">Polinomios</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="vectors">Vectores</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="symbolic">Simbólico</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="plot2d">Gráfica 2D</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="plot3d">Gráfica 3D</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="systems">Sistemas</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium"
+                            data-tab="optimization">Optimización</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium"
+                            data-tab="differential">Diferencial</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium" data-tab="random">Aleatorio</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium"
+                            data-tab="statistics">Estadística</button>
+                        <button class="calc-tab px-4 py-2 text-sm font-medium"
+                            data-tab="probability">Probabilidad</button>
+                    </div>
+                </div>
+
+                <!-- Contenedor principal de la calculadora -->
+                <div class="calculator bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6 mb-4">
+                    <!-- Paneles de contenido para cada tipo de cálculo -->
+                    <div id="calculator-panels">
+                        <!-- Panel básico (visible por defecto) -->
+                        <div id="basic-panel" class="calculator-panel active">
+                            <div
+                                class="calc-display mb-4 p-3 text-right text-xl font-mono h-16 rounded-md overflow-x-auto overflow-y-hidden whitespace-nowrap">
+                                0
+                            </div>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button
+                                    class="calc-button col-span-2 p-3 rounded-md bg-red-500 text-white font-bold">AC</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white">DEL</button>
+                                <button class="calc-button p-3 rounded-md bg-blue-500 text-white">/</button>
+
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">7</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">8</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">9</button>
+                                <button class="calc-button p-3 rounded-md bg-blue-500 text-white">×</button>
+
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">4</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">5</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">6</button>
+                                <button class="calc-button p-3 rounded-md bg-blue-500 text-white">-</button>
+
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">1</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">2</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">3</button>
+                                <button class="calc-button p-3 rounded-md bg-blue-500 text-white">+</button>
+
+                                <button
+                                    class="calc-button col-span-2 p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">0</button>
+                                <button
+                                    class="calc-button p-3 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">.</button>
+                                <button class="calc-button p-3 rounded-md bg-green-500 text-white">=</button>
+                            </div>
+
+                            <div class="grid grid-cols-4 gap-2 mt-3">
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">sin</button>
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">cos</button>
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">tan</button>
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">π</button>
+
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">√</button>
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">x²</button>
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">xⁿ</button>
+                                <button class="calc-button p-3 rounded-md bg-purple-500 text-white">log</button>
+                            </div>
+                        </div>
+
+                        <!-- Panel de matrices (oculto inicialmente) -->
+                        <div id="matrices-panel" class="calculator-panel hidden">
+                            <div class="mb-4">
+                                <label class="block mb-2">Dimensiones de la matriz:</label>
+                                <div class="flex space-x-2">
+                                    <input type="number" id="matrix-rows" min="1" max="5" value="3"
+                                        class="p-2 rounded-md w-16 text-center">
+                                    <span class="text-xl">×</span>
+                                    <input type="number" id="matrix-cols" min="1" max="5" value="3"
+                                        class="p-2 rounded-md w-16 text-center">
+                                    <button id="create-matrix"
+                                        class="ml-2 p-2 bg-blue-500 text-white rounded-md">Crear</button>
+                                </div>
+                            </div>
+
+                            <div class="matrix-container mb-4">
+                                <div id="matrix-inputs"
+                                    class="inline-block border border-gray-300 dark:border-gray-600 p-2 rounded-md">
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block mb-2">Operación:</label>
+                                <select id="matrix-operation" class="p-2 rounded-md w-full">
+                                    <option value="determinant">Determinante</option>
+                                    <option value="inverse">Inversa</option>
+                                    <option value="transpose">Transpuesta</option>
+                                    <option value="eigenvalues">Valores propios</option>
+                                </select>
+                            </div>
+
+                            <button id="compute-matrix"
+                                class="w-full p-3 bg-green-500 text-white rounded-md">Calcular</button>
+
+                            <div class="mt-4">
+                                <div id="matrix-result"
+                                    class="p-3 border border-gray-300 dark:border-gray-600 rounded-md min-h-16"></div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de polinomios (oculto inicialmente) -->
+                        <div id="polynomials-panel" class="calculator-panel hidden">
+                            <div class="mb-4">
+                                <label class="block mb-2">Primer polinomio (formato: a₅x⁵ + a₄x⁴ + ... + a₀):</label>
+                                <input type="text" id="poly1" placeholder="Ej: 3x^2 + 2x - 5"
+                                    class="p-2 rounded-md w-full">
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block mb-2">Segundo polinomio (opcional):</label>
+                                <input type="text" id="poly2" placeholder="Ej: x^3 - 4x" class="p-2 rounded-md w-full">
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block mb-2">Operación:</label>
+                                <select id="poly-operation" class="p-2 rounded-md w-full">
+                                    <option value="add">Suma</option>
+                                    <option value="subtract">Resta</option>
+                                    <option value="multiply">Multiplicación</option>
+                                    <option value="divide">División</option>
+                                    <option value="roots">Encontrar raíces</option>
+                                    <option value="derivative">Derivada</option>
+                                    <option value="integral">Integral</option>
+                                </select>
+                            </div>
+
+                            <button id="compute-poly"
+                                class="w-full p-3 bg-green-500 text-white rounded-md">Calcular</button>
+
+                            <div class="mt-4">
+                                <div id="poly-result"
+                                    class="p-3 border border-gray-300 dark:border-gray-600 rounded-md min-h-16"></div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de vectores (oculto inicialmente) -->
+                        <div id="vectors-panel" class="calculator-panel hidden">
+                            <div class="mb-4">
+                                <label class="block mb-2">Vector 1 (componentes separados por comas):</label>
+                                <input type="text" id="vector1" placeholder="Ej: 1,2,3" class="p-2 rounded-md w-full">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block mb-2">Vector 2 (opcional, para operaciones entre dos
+                                    vectores):</label>
+                                <input type="text" id="vector2" placeholder="Ej: 4,5,6" class="p-2 rounded-md w-full">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block mb-2">Operación vectorial:</label>
+                                <select id="vector-operation" class="p-2 rounded-md w-full">
+                                    <option value="dot">Producto Punto</option>
+                                    <option value="cross">Producto Cruz</option>
+                                    <option value="magnitude">Magnitud (Vector 1)</option>
+                                </select>
+                            </div>
+                            <button id="compute-vector"
+                                class="w-full p-3 bg-green-500 text-white rounded-md">Calcular</button>
+                            <div class="mt-4">
+                                <div id="vector-result"
+                                    class="p-3 border border-gray-300 dark:border-gray-600 rounded-md min-h-16"></div>
+                            </div>
+                        </div>
+
+                        <!-- Resto de los paneles estarían aquí pero ocultos por defecto -->
+                        <div id="symbolic-panel" class="calculator-panel hidden">
+                            <div class="space-y-4">
+                                <label class="block mb-1 font-medium">Expresión / Ecuación:</label>
+                                <textarea id="symbolic-input" class="w-full p-2 border rounded" rows="2"
+                                    placeholder="Ej: x^2 + 2*x + 1 = 0 ó sin(x) * e^x"></textarea>
+
+                                <label class="block mb-1 font-medium">Operación:</label>
+                                <select id="symbolic-operation" class="w-full p-2 border rounded">
+                                    <option value="integrate">Integrar funciones</option>
+                                    <option value="differentiate">Derivar funciones</option>
+                                    <option value="simplify">Simplificar expresiones algebraicas</option>
+                                    <option value="solve">Resolver ecuaciones</option>
+                                </select>
+
+                                <button id="compute-symbolic" class="w-full p-2 bg-green-500 text-white rounded">
+                                    Calcular
+                                </button>
+
+                                <div id="symbolic-result" class="mt-4 p-3 border rounded bg-gray-50 dark:bg-gray-700">
+                                    <!-- Aquí se mostrará el resultado en LaTeX -->
+                                </div>
+                                <div id="symbolic-steps"
+                                    class="mt-2 p-3 border rounded bg-gray-100 dark:bg-gray-800 max-h-48 overflow-y-auto">
+                                    <!-- Aquí se mostrarán los pasos de la explicación -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="plot2d-panel" class="calculator-panel hidden p-4">
+                            <!-- Chart Controls -->
+                            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                                <div class="flex-1">
+                                    <label class="block mb-1 font-medium">Tipo de Gráfico:</label>
+                                    <select id="chart-type" class="w-full p-2 rounded-md">
+                                        <option value="line">Gráfico de líneas</option>
+                                        <option value="bar">Gráfico de barras</option>
+                                        <option value="scatter">Gráfico de dispersión</option>
+                                        <option value="mixed">Gráfico mixto</option>
+                                    </select>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block mb-1 font-medium">Datos (CSV o JSON):</label>
+                                    <textarea id="chart-data" rows="3" class="w-full p-2 border rounded-md font-mono"
+                                        placeholder="Ej: 1,2,3,4 o [{" x":1,"y":2},…]"></textarea>
+                                </div>
+                            </div>
+                            <!-- Canvas Container -->
+                            <div class="relative">
+                                <canvas id="plot2d-canvas"
+                                    class="w-full h-64 bg-white dark:bg-gray-700 rounded-md shadow-inner"></canvas>
+                            </div>
+                        </div>
+
+                        <div id="plot3d-panel" class="calculator-panel hidden p-4 space-y-4">
+                            <!-- Graph type selector -->
+                            <div>
+                                <label class="block mb-1 font-medium">Tipo de Gráfica 3D:</label>
+                                <select id="plot3d-type" class="w-full p-2 border rounded-md">
+                                    <option value="line3d">Gráfico de líneas 3D</option>
+                                    <option value="surface3d">Gráfico de superficies</option>
+                                    <option value="scatter3d">Dispersión 3D</option>
+                                </select>
+                            </div>
+
+                            <!-- CSV data input -->
+                            <div>
+                                <label class="block mb-1 font-medium">Datos (CSV)</label>
+                                <textarea id="plot3d-data" rows="4" class="w-full p-2 border rounded-md font-mono"
+                                    placeholder="x1,y1,z1\nx2,y2,z2\n…"></textarea>
+                            </div>
+
+                            <!-- Style customizations -->
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="flex-1">
+                                    <label class="block mb-1 font-medium">Color principal:</label>
+                                    <input type="color" id="plot3d-color" value="#3b82f6"
+                                        class="w-full h-10 p-0 border rounded-md" />
+                                </div>
+                                <div class="flex-1 flex items-center mt-6">
+                                    <input type="checkbox" id="plot3d-grid" class="mr-2" />
+                                    <label for="plot3d-grid" class="font-medium">Mostrar cuadrícula</label>
+                                </div>
+                            </div>
+
+                            <!-- Trigger button -->
+                            <button id="plot3d-btn" class="w-full p-3 bg-green-500 text-white rounded-md">
+                                Calcular Gráfica 3D
+                            </button>
+
+                            <!-- Graph container -->
+                            <div id="plot3d-container"
+                                class="w-full h-64 bg-white dark:bg-gray-700 rounded-md shadow-inner">
+                                <!-- Plotly.js will render here -->
+                            </div>
+
+                            <!-- Error / status message -->
+                            <div id="plot3d-error" class="text-red-500 text-sm"></div>
+                        </div>
+
+                        <div id="systems-panel" class="calculator-panel hidden">
+                            <p class="text-center py-8">Panel de sistemas - Haga clic en una pestaña para cambiar la
+                                operación</p>
+                        </div>
+
+                        <div id="optimization-panel" class="calculator-panel hidden">
+                            <p class="text-center py-8">Panel de optimización - Haga clic en una pestaña para cambiar la
+                                operación</p>
+                        </div>
+
+                        <div id="differential-panel" class="calculator-panel hidden">
+                            <p class="text-center py-8">Panel diferencial - Haga clic en una pestaña para cambiar la
+                                operación</p>
+                        </div>
+
+                        <div id="random-panel" class="calculator-panel hidden">
+                            <p class="text-center py-8">Panel aleatorio - Haga clic en una pestaña para cambiar la
+                                operación</p>
+                        </div>
+
+                        <div id="statistics-panel" class="calculator-panel hidden">
+                            <p class="text-center py-8">Panel de estadística - Haga clic en una pestaña para cambiar la
+                                operación</p>
+                        </div>
+
+                        <div id="probability-panel" class="calculator-panel hidden">
+                            <p class="text-center py-8">Panel de probabilidad - Haga clic en una pestaña para cambiar la
+                                operación</p>
+                        </div>
+                    </div>
+
+                    <!-- Spinner de carga -->
+                    <div class="spinner" id="loading-spinner"></div>
+                </div>
+            </main>
+
+            <!-- Panel de historial -->
+            <aside
+                class="history-panel w-full md:w-64 bg-gray-50 dark:bg-gray-900 rounded-lg shadow-md p-4 max-h-[80vh] overflow-y-auto">
+                <div class="mb-3 border-b pb-2 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Historial</h3>
+                    <button id="clear-history-btn"
+                        class="flex items-center space-x-1 text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded transition"
+                        title="Limpiar historial">
+                        <i class="fas fa-trash-alt"></i>
+                        <span>Limpiar</span>
+                    </button>
+                </div>
+                <div id="history-list" class="space-y-2 max-h-96 overflow-y-auto">
+                    <!-- El historial se generará dinámicamente aquí -->
+                    <p class="text-gray-500 text-sm italic">No hay operaciones en el historial.</p>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Panel de ayuda modal (oculto inicialmente) -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Ayuda de la Calculadora</h2>
+                <button id="close-help"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="prose dark:prose-invert">
+                <h3>Calculadora Básica</h3>
+                <p>Utilice los botones numéricos y operadores para realizar cálculos simples. Pulse "=" para obtener el
+                    resultado.</p>
+
+                <h3>Operaciones con Matrices</h3>
+                <p>Defina las dimensiones, introduzca los valores de la matriz y seleccione la operación que desea
+                    realizar.</p>
+
+                <h3>Polinomios</h3>
+                <p>Introduzca polinomios en formato algebraico estándar (por ejemplo: 3x^2 + 2x - 5) y elija la
+                    operación deseada.</p>
+
+                <h3>Cambiar Tema</h3>
+                <p>Puede cambiar entre tema claro, oscuro o alto contraste utilizando el menú desplegable en la esquina
+                    superior derecha.</p>
+
+                <h3>Historial</h3>
+                <p>Todas sus operaciones se guardan automáticamente en el panel de historial. Haga clic en una entrada
+                    para cargar esa operación de nuevo.</p>
+            </div>
+        </div>
+    </div>
+    <!-- TailwindCSS para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- nerdamer y módulos-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nerdamer/1.1.17/nerdamer.core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nerdamer/1.1.17/Algebra.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nerdamer/1.1.17/Calculus.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nerdamer/1.1.17/Solve.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nerdamer/1.1.17/Extra.min.js"></script>
+    <!-- Math.js para sistemas lineales y álgebra básica -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
+    <!-- Algebrite para álgebra simbólica avanzada -->
+    <script src="https://unpkg.com/algebrite"></script>
+    <!-- SymPy: se recomienda usar API o Pyodide, aquí se muestra ejemplo de API -->
+    <!-- MathJax para renderizado de fórmulas matemáticas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plotly.js para gráficos 3D -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script id="app-script">
+        // Función para controlar el menú desplegable
+        function setupDropdown() {
+            const dropdown = document.getElementById('dropdown-toggle');
+            const menu = document.getElementById('dropdown-menu');
+
+            dropdown.addEventListener('click', function () {
+                menu.classList.toggle('open');
+            });
+
+            // Cerrar el menú al hacer clic fuera
+            document.addEventListener('click', function (event) {
+                if (!event.target.closest('#menu-dropdown')) {
+                    menu.classList.remove('open');
+                }
+            });
+        }
+
+        // Función para cambiar de tema
+        function setupThemeSelector() {
+            const themeSelector = document.getElementById('theme-selector');
+
+            themeSelector.addEventListener('change', function () {
+                const body = document.body;
+                body.classList.remove('dark-theme', 'high-contrast-theme');
+
+                if (themeSelector.value === 'dark') {
+                    body.classList.add('dark-theme');
+                } else if (themeSelector.value === 'high-contrast') {
+                    body.classList.add('high-contrast-theme');
+                }
+
+                // Guardar preferencia en localStorage
+                localStorage.setItem('calculatorTheme', themeSelector.value);
+            });
+
+            // Cargar tema guardado
+            const savedTheme = localStorage.getItem('calculatorTheme');
+            if (savedTheme) {
+                themeSelector.value = savedTheme;
+                themeSelector.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Función para cambiar tamaño de fuente
+        function setupFontSizeSelector() {
+            themeSelector.value = savedTheme;
+            themeSelector.dispatchEvent(new Event('change'));
+        }
+
+
+        // Función para cambiar tamaño de fuente
+        function setupFontSizeSelector() {
+            const fontSizeSelector = document.getElementById('font-size-selector');
+
+            fontSizeSelector.addEventListener('change', function () {
+                const calculator = document.querySelector('.calculator');
+                calculator.style.fontSize = '';
+
+                if (fontSizeSelector.value === 'large') {
+                    calculator.style.fontSize = '1.2rem';
+                } else if (fontSizeSelector.value === 'x-large') {
+                    calculator.style.fontSize = '1.4rem';
+                }
+
+                // Guardar preferencia en localStorage
+                localStorage.setItem('calculatorFontSize', fontSizeSelector.value);
+            });
+
+            // Cargar tamaño de fuente guardado
+            const savedFontSize = localStorage.getItem('calculatorFontSize');
+            if (savedFontSize) {
+                fontSizeSelector.value = savedFontSize;
+                fontSizeSelector.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Función para configurar las pestañas
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.calc-tab');
+            const panels = document.querySelectorAll('.calculator-panel');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    // Desactivar todas las pestañas y paneles
+                    tabs.forEach(t => t.classList.remove('tab-active'));
+                    panels.forEach(p => p.classList.add('hidden'));
+
+                    // Activar la pestaña seleccionada
+                    this.classList.add('tab-active');
+
+                    // Mostrar el panel correspondiente
+                    const tabId = this.getAttribute('data-tab');
+                    const panel = document.getElementById(`${tabId}-panel`);
+                    if (panel) {
+                        panel.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
+        // Función para configurar la calculadora básica
+        function setupBasicCalculator() {
+            const display = document.querySelector('.calc-display');
+            const buttons = document.querySelectorAll('#basic-panel .calc-button');
+
+            let currentValue = '0';
+            let previousValue = '';
+            let operation = null;
+            let resetOnNextInput = false;
+
+            // Actualizar pantalla
+            function updateDisplay() {
+                display.textContent = currentValue;
+            }
+
+            // Añadir un número
+            function appendNumber(number) {
+                if (currentValue === '0' || resetOnNextInput) {
+                    currentValue = number;
+                    resetOnNextInput = false;
+                } else {
+                    currentValue += number;
+                }
+                updateDisplay();
+            }
+
+            // Añadir decimal
+            function appendDecimal() {
+                if (resetOnNextInput) {
+                    currentValue = '0.';
+                    resetOnNextInput = false;
+                } else if (!currentValue.includes('.')) {
+                    currentValue += '.';
+                }
+                updateDisplay();
+            }
+
+            // Seleccionar operación
+            function selectOperation(op) {
+                if (operation !== null) {
+                    calculate();
+                }
+
+                previousValue = currentValue;
+                operation = op;
+                resetOnNextInput = true;
+            }
+
+            // Calcular resultado
+            // Dentro de setupBasicCalculator(), reemplaza la función calculate() por esta:
+            async function calculate() {
+                let result = 0;
+                const prev = parseFloat(previousValue);
+                const current = parseFloat(currentValue);
+
+                if (isNaN(prev) || isNaN(current) || !operation) return;
+
+                const op = operation; // Guarda la operación antes de resetearla
+
+                switch (operation) {
+                    case '+':
+                        result = prev + current;
+                        break;
+                    case '-':
+                        result = prev - current;
+                        break;
+                    case '×':
+                        result = prev * current;
+                        break;
+                    case '/':
+                        result = current === 0 ? 'Error' : prev / current;
+                        break;
+                    case 'pow':
+                        result = Math.pow(prev, current);
+                        break;
+                    default:
+                        return;
+                }
+
+                // Formatear según precisión decimal si es un número
+                if (typeof result === 'number' && result !== 'Error') {
+                    const precision = parseInt(document.getElementById('decimal-precision').value);
+                    result = result.toFixed(precision);
+                    // Eliminar ceros finales después del punto decimal
+                    if (result.includes('.')) {
+                        result = result.replace(/\.?0+$/, '');
+                    }
+                }
+
+                currentValue = result.toString();
+                operation = null;
+                previousValue = '';
+                resetOnNextInput = true;
+
+                // Añadir al historial
+                addToHistory(`${prev} ${op} ${current} = ${currentValue}`);
+
+                updateDisplay();
+            }
+
+            // Operaciones especiales (sin, cos, etc.)
+            function specialOperation(op) {
+                const value = parseFloat(currentValue);
+                let result = 0;
+
+                switch (op) {
+                    case 'sin':
+                        result = Math.sin(value * Math.PI / 180); // En grados
+                        break;
+                    case 'cos':
+                        result = Math.cos(value * Math.PI / 180);
+                        break;
+                    case 'tan':
+                        result = Math.tan(value * Math.PI / 180);
+                        break;
+                    case 'π':
+                        result = Math.PI;
+                        break;
+                    case '√':
+                        result = Math.sqrt(value);
+                        break;
+                    case 'x²':
+                        result = Math.pow(value, 2);
+                        break;
+                    case 'xⁿ':
+                        previousValue = currentValue;
+                        operation = 'pow';
+                        resetOnNextInput = true;
+                        return;
+                    case 'log':
+                        result = Math.log10(value);
+                        break;
+                    default:
+                        return;
+                }
+
+                // Formatear según precisión decimal
+                const precision = parseInt(document.getElementById('decimal-precision').value);
+                currentValue = result.toFixed(precision);
+
+                // Eliminar ceros finales después del punto decimal
+                if (currentValue.includes('.')) {
+                    currentValue = currentValue.replace(/\.?0+$/, '');
+                }
+
+                // Añadir al historial
+                addToHistory(`${op}(${value}) = ${currentValue}`);
+
+                updateDisplay();
+            }
+
+            // Clear y Delete
+            function clear() {
+                currentValue = '0';
+                previousValue = '';
+                operation = null;
+                updateDisplay();
+            }
+
+            function deleteLastChar() {
+                if (currentValue.length > 1) {
+                    currentValue = currentValue.slice(0, -1);
+                } else {
+                    currentValue = '0';
+                }
+                updateDisplay();
+            }
+
+            // Asignar eventos a los botones
+            buttons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const buttonText = this.textContent;
+
+                    if (buttonText >= '0' && buttonText <= '9') {
+                        appendNumber(buttonText);
+                    } else if (buttonText === '.') {
+                        appendDecimal();
+                    } else if (['+', '-', '×', '/'].includes(buttonText)) {
+                        selectOperation(buttonText);
+                    } else if (buttonText === '=') {
+                        calculate();
+                    } else if (buttonText === 'AC') {
+                        clear();
+                    } else if (buttonText === 'DEL') {
+                        deleteLastChar();
+                    } else {
+                        specialOperation(buttonText);
+                    }
+                });
+            });
+
+            // Inicializar la pantalla
+            updateDisplay();
+        }
+
+        // Función para configurar la creación de matrices
+        function setupMatrixCalculator() {
+            const createMatrixButton = document.getElementById('create-matrix');
+            const matrixInputsContainer = document.getElementById('matrix-inputs');
+            const computeMatrixButton = document.getElementById('compute-matrix');
+            const matrixResultDiv = document.getElementById('matrix-result');
+
+            createMatrixButton.addEventListener('click', function () {
+                const rows = parseInt(document.getElementById('matrix-rows').value) || 3;
+                const cols = parseInt(document.getElementById('matrix-cols').value) || 3;
+
+                // Limitar tamaño de matriz para usabilidad
+                const limitedRows = Math.min(Math.max(rows, 1), 5);
+                const limitedCols = Math.min(Math.max(cols, 1), 5);
+
+                // Actualizar los campos de entrada con los valores limitados
+                document.getElementById('matrix-rows').value = limitedRows;
+                document.getElementById('matrix-cols').value = limitedCols;
+
+                // Crear la matrix de entrada
+                matrixInputsContainer.innerHTML = '';
+                const table = document.createElement('table');
+
+                for (let i = 0; i < limitedRows; i++) {
+                    const row = document.createElement('tr');
+
+                    for (let j = 0; j < limitedCols; j++) {
+                        const cell = document.createElement('td');
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.value = '0';
+                        input.className = 'matrix-input';
+                        input.dataset.row = i;
+                        input.dataset.col = j;
+                        cell.appendChild(input);
+                        row.appendChild(cell);
+                    }
+
+                    table.appendChild(row);
+                }
+
+                matrixInputsContainer.appendChild(table);
+            });
+
+            computeMatrixButton.addEventListener('click', function () {
+                const spinner = document.getElementById('loading-spinner');
+                const matrixResultDiv = document.getElementById('matrix-result');
+                spinner.style.display = 'block';
+                matrixResultDiv.innerHTML = '';
+
+                const operation = document.getElementById('matrix-operation').value;
+                const inputs = document.querySelectorAll('#matrix-inputs input');
+                const rows = parseInt(document.getElementById('matrix-rows').value);
+                const cols = parseInt(document.getElementById('matrix-cols').value);
+                const matrix = Array.from({ length: rows }, () => Array(cols));
+
+                // Validar que todos los campos sean números y no vacíos
+                let valid = true;
+                inputs.forEach(i => {
+                    if (i.value === "" || isNaN(i.value)) valid = false;
+                    matrix[i.dataset.row][i.dataset.col] = parseFloat(i.value);
+                });
+                if (!valid) {
+                    spinner.style.display = 'none';
+                    matrixResultDiv.innerHTML = `<span class="text-red-500">Todos los campos deben ser números</span>`;
+                    return;
+                }
+
+                // Validar que la matriz sea cuadrada para ciertas operaciones
+                if (
+                    ['determinant', 'inverse', 'eigenvalues'].includes(operation) &&
+                    rows !== cols
+                ) {
+                    spinner.style.display = 'none';
+                    matrixResultDiv.innerHTML = `<span class="text-red-500">La matriz debe ser cuadrada para esta operación</span>`;
+                    return;
+                }
+
+                // Determinante (recursivo)
+                function determinant(m) {
+                    const n = m.length;
+                    if (n === 1) return m[0][0];
+                    if (n === 2) return m[0][0] * m[1][1] - m[0][1] * m[1][0];
+                    let det = 0;
+                    for (let j = 0; j < n; j++) {
+                        const sub = m.slice(1).map(row => row.filter((_, col) => col !== j));
+                        det += ((j % 2 === 0 ? 1 : -1) * m[0][j] * determinant(sub));
+                    }
+                    return det;
+                }
+
+                // Transpuesta
+                function transpose(m) {
+                    return m[0].map((_, i) => m.map(row => row[i]));
+                }
+
+                // Inversa (método de Gauss-Jordan)
+                function inverse(m) {
+                    const n = m.length;
+                    // Crear matriz aumentada
+                    let A = m.map((row, i) => [...row, ...Array.from({ length: n }, (_, j) => i === j ? 1 : 0)]);
+                    // Gauss-Jordan
+                    for (let i = 0; i < n; i++) {
+                        // Pivote
+                        let maxRow = i;
+                        for (let k = i + 1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+                        [A[i], A[maxRow]] = [A[maxRow], A[i]];
+                        if (A[i][i] === 0) return null; // No invertible
+                        // Normalizar fila
+                        let div = A[i][i];
+                        for (let j = 0; j < 2 * n; j++) A[i][j] /= div;
+                        // Eliminar otras filas
+                        for (let k = 0; k < n; k++) {
+                            if (k !== i) {
+                                let factor = A[k][i];
+                                for (let j = 0; j < 2 * n; j++) A[k][j] -= factor * A[i][j];
+                            }
+                        }
+                    }
+                    // Extraer inversa
+                    return A.map(row => row.slice(n));
+                }
+
+                let result;
+                if (operation === 'determinant') {
+                    result = determinant(matrix);
+                    matrixResultDiv.innerHTML = `<span class="font-mono text-blue-600">Determinante: ${result}</span>`;
+                    addToHistory(`Determinante: ${result}`);
+                } else if (operation === 'transpose') {
+                    result = transpose(matrix);
+                    matrixResultDiv.innerHTML = `<span class="font-mono text-blue-600">Transpuesta:<br>${result.map(row => row.join('\t')).join('<br>')}</span>`;
+                    addToHistory(`Transpuesta: ${JSON.stringify(result)}`);
+                } else if (operation === 'inverse') {
+                    result = inverse(matrix);
+                    if (!result) {
+                        matrixResultDiv.innerHTML = `<span class="text-red-500">La matriz no es invertible</span>`;
+                    } else {
+                        matrixResultDiv.innerHTML = `<span class="font-mono text-blue-600">Inversa:<br>${result.map(row => row.map(x => Number.isFinite(x) ? x.toFixed(4) : x).join('\t')).join('<br>')}</span>`;
+                        addToHistory(`Inversa: ${JSON.stringify(result)}`);
+                    }
+                } else if (operation === 'eigenvalues') {
+                    matrixResultDiv.innerHTML = `<span class="font-mono text-blue-600">Valores propios: <br><i>(Solo disponible con librerías avanzadas)</i></span>`;
+                    addToHistory(`Valores propios: Solo disponible con librerías avanzadas`);
+                }
+
+                spinner.style.display = 'none';
+            });
+
+            // Crear matriz inicial
+            createMatrixButton.click();
+        }
+
+        // Función para configurar la calculadora de polinomios
+        function setupPolynomialCalculator() {
+            const computePolyButton = document.getElementById('compute-poly');
+            const polyResultDiv = document.getElementById('poly-result');
+
+            // Parsear polinomio tipo "3x^2 + 2x - 5" a array de coeficientes
+            function parsePoly(str) {
+                str = str.replace(/\s+/g, '').replace(/-/g, '+-');
+                if (str[0] === '+') str = str.slice(1);
+                const terms = str.split('+');
+                let maxDegree = 0;
+                const coeffs = {};
+                for (let term of terms) {
+                    if (!term) continue;
+                    let match = term.match(/^([+-]?\d*\.?\d*)x(?:\^(\d+))?$/);
+                    if (match) {
+                        let coef = match[1] === '' || match[1] === '+' ? 1 : match[1] === '-' ? -1 : parseFloat(match[1]);
+                        let deg = match[2] ? parseInt(match[2]) : 1;
+                        coeffs[deg] = (coeffs[deg] || 0) + coef;
+                        if (deg > maxDegree) maxDegree = deg;
+                    } else {
+                        // término independiente
+                        coeffs[0] = (coeffs[0] || 0) + parseFloat(term);
+                    }
+                }
+                // Construir array de coeficientes
+                const arr = [];
+                for (let i = 0; i <= maxDegree; i++) arr[i] = coeffs[i] || 0;
+                return arr.reverse(); // mayor grado primero
+            }
+
+            // Formatear array de coeficientes a string
+            function polyToString(coeffs) {
+                let str = '';
+                const n = coeffs.length;
+                for (let i = 0; i < n; i++) {
+                    const coef = coeffs[i];
+                    const deg = n - i - 1;
+                    if (Math.abs(coef) < 1e-12) continue;
+                    let part = '';
+                    if (coef > 0 && str) part += '+';
+                    if (deg === 0) part += coef;
+                    else {
+                        if (coef === 1) part += '';
+                        else if (coef === -1) part += '-';
+                        else part += coef;
+                        part += 'x';
+                        if (deg > 1) part += '^' + deg;
+                    }
+                    str += part;
+                }
+                return str || '0';
+            }
+
+            // Formatear array de coeficientes a LaTeX
+            function polyToLatex(coeffs) {
+                let str = '';
+                const n = coeffs.length;
+                for (let i = 0; i < n; i++) {
+                    const coef = coeffs[i];
+                    const deg = n - i - 1;
+                    if (Math.abs(coef) < 1e-12) continue;
+                    let part = '';
+                    if (coef > 0 && str) part += '+';
+                    if (deg === 0) part += coef;
+                    else {
+                        if (coef === 1) part += '';
+                        else if (coef === -1) part += '-';
+                        else part += coef;
+                        part += 'x';
+                        if (deg > 1) part += '^{' + deg + '}';
+                    }
+                    str += part;
+                }
+                return str || '0';
+            }
+
+            // Suma/resta/multiplicación/división
+            function addPoly(a, b) {
+                const n = Math.max(a.length, b.length);
+                const res = [];
+                for (let i = 0; i < n; i++) {
+                    res[i] = (a[a.length - n + i] || 0) + (b[b.length - n + i] || 0);
+                }
+                return res;
+            }
+            function subPoly(a, b) {
+                const n = Math.max(a.length, b.length);
+                const res = [];
+                for (let i = 0; i < n; i++) {
+                    res[i] = (a[a.length - n + i] || 0) - (b[b.length - n + i] || 0);
+                }
+                return res;
+            }
+            function mulPoly(a, b) {
+                const res = Array(a.length + b.length - 1).fill(0);
+                for (let i = 0; i < a.length; i++)
+                    for (let j = 0; j < b.length; j++)
+                        res[i + j] += a[i] * b[j];
+                return res;
+            }
+            function divPoly(a, b) {
+                // División sintética (solo cociente y residuo)
+                let dividend = a.slice();
+                let divisor = b.slice();
+                let n = dividend.length - 1;
+                let m = divisor.length - 1;
+                if (m < 0) return { quotient: [0], remainder: dividend };
+                let quotient = Array(n - m + 1).fill(0);
+                for (let k = 0; k <= n - m; k++) {
+                    let coef = dividend[k] / divisor[0];
+                    quotient[k] = coef;
+                    for (let j = 0; j <= m; j++) {
+                        dividend[k + j] -= coef * divisor[j];
+                    }
+                }
+                let remainder = dividend.slice(n - m + 1);
+                return { quotient, remainder };
+            }
+
+            // Derivada e integral
+            function derivative(a) {
+                const n = a.length;
+                if (n === 1) return [0];
+                const res = [];
+                for (let i = 0; i < n - 1; i++) {
+                    res[i] = a[i] * (n - i - 1);
+                }
+                return res;
+            }
+            function integral(a) {
+                const n = a.length;
+                const res = [];
+                for (let i = 0; i < n; i++) {
+                    res[i] = a[i] / (n - i);
+                }
+                res.push(0); // +C
+                return res;
+            }
+
+            // Raíces (solo hasta grado 2)
+            function roots(a) {
+                const n = a.length - 1;
+                if (n === 1) {
+                    // Lineal: ax + b = 0
+                    const [a1, b1] = a;
+                    return [-b1 / a1];
+                } else if (n === 2) {
+                    // Cuadrática: ax^2 + bx + c = 0
+                    const [a2, b2, c2] = a;
+                    const disc = b2 * b2 - 4 * a2 * c2;
+                    if (disc < 0) return ['No reales'];
+                    if (disc === 0) return [-b2 / (2 * a2)];
+                    const sqrtDisc = Math.sqrt(disc);
+                    return [(-b2 + sqrtDisc) / (2 * a2), (-b2 - sqrtDisc) / (2 * a2)];
+                } else {
+                    return ['Solo implementado para grado ≤ 2'];
+                }
+            }
+
+            computePolyButton.addEventListener('click', function () {
+                const spinner = document.getElementById('loading-spinner');
+                spinner.style.display = 'block';
+                polyResultDiv.innerHTML = '';
+
+                const poly1 = document.getElementById('poly1').value;
+                const poly2 = document.getElementById('poly2').value;
+                const operation = document.getElementById('poly-operation').value;
+
+                let a = parsePoly(poly1);
+                let b = poly2 ? parsePoly(poly2) : null;
+                let result = '';
+                let latex = '';
+
+                try {
+                    if (operation === 'add') {
+                        if (!b) throw 'Se requiere un segundo polinomio';
+                        const sum = addPoly(a, b);
+                        result = polyToString(sum);
+                        latex = `\\left(${polyToLatex(a)}\\right) + \\left(${polyToLatex(b)}\\right) = ${polyToLatex(sum)}`;
+                    } else if (operation === 'subtract') {
+                        if (!b) throw 'Se requiere un segundo polinomio';
+                        const diff = subPoly(a, b);
+                        result = polyToString(diff);
+                        latex = `\\left(${polyToLatex(a)}\\right) - \\left(${polyToLatex(b)}\\right) = ${polyToLatex(diff)}`;
+                    } else if (operation === 'multiply') {
+                        if (!b) throw 'Se requiere un segundo polinomio';
+                        const prod = mulPoly(a, b);
+                        result = polyToString(prod);
+                        latex = `\\left(${polyToLatex(a)}\\right) \\times \\left(${polyToLatex(b)}\\right) = ${polyToLatex(prod)}`;
+                    } else if (operation === 'divide') {
+                        if (!b) throw 'Se requiere un segundo polinomio';
+                        const { quotient, remainder } = divPoly(a, b);
+                        result = `Cociente: ${polyToString(quotient)}, Resto: ${polyToString(remainder)}`;
+                        latex = `\\frac{${polyToLatex(a)}}{${polyToLatex(b)}} = ${polyToLatex(quotient)}, \\text{ resto } ${polyToLatex(remainder)}`;
+                    } else if (operation === 'roots') {
+                        const r = roots(a);
+                        result = `Raíces: ${r.join(', ')}`;
+                        latex = result;
+                    } else if (operation === 'derivative') {
+                        const der = derivative(a);
+                        result = polyToString(der);
+                        latex = `\\frac{d}{dx}\\left(${polyToLatex(a)}\\right) = ${polyToLatex(der)}`;
+                    } else if (operation === 'integral') {
+                        const integ = integral(a);
+                        result = polyToString(integ) + ' + C';
+                        latex = `\\int \\left(${polyToLatex(a)}\\right)dx = ${polyToLatex(integ)} + C`;
+                    }
+                } catch (e) {
+                    result = `Error: ${e}`;
+                    latex = result;
+                }
+
+                spinner.style.display = 'none';
+                polyResultDiv.innerHTML = `<span class="font-mono text-blue-600">${result}</span><br><span class="font-mono text-blue-600">\\(${latex}\\)</span>`;
+                if (window.MathJax) {
+                    MathJax.typesetPromise([polyResultDiv]);
+                }
+                addToHistory(`Polinomio: ${latex}`);
+            });
+        }
+
+        // Función para configurar la calculadora de vectores
+        function setupVectorCalculator() {
+            const btn = document.getElementById('compute-vector');
+            const out = document.getElementById('vector-result');
+
+            btn.addEventListener('click', () => {
+                // parse inputs
+                const parseVec = id => document.getElementById(id)
+                    .value.split(',').map(n => parseFloat(n.trim()));
+                const v1 = parseVec('vector1');
+                const v2 = parseVec('vector2');
+                const op = document.getElementById('vector-operation').value;
+
+                let result;
+                if (op === 'dot') {
+                    if (v1.length !== v2.length) {
+                        result = 'Error: dimensiones distintas';
+                    } else {
+                        result = v1.reduce((sum, x, i) => sum + x * v2[i], 0);
+                    }
+                } else if (op === 'cross') {
+                    if (v1.length === 3 && v2.length === 3) {
+                        result = [
+                            v1[1] * v2[2] - v1[2] * v2[1],
+                            v1[2] * v2[0] - v1[0] * v2[2],
+                            v1[0] * v2[1] - v1[1] * v2[0]
+                        ];
+                    } else {
+                        result = 'Error: producto cruz solo para vectores de 3 componentes';
+                    }
+                } else if (op === 'magnitude') {
+                    result = Math.sqrt(v1.reduce((sum, x) => sum + x * x, 0));
+                }
+
+                out.innerHTML = `<span class="font-mono text-blue-600">${Array.isArray(result) ? `[${result.join(', ')}]` : result}</span>`;
+                addToHistory(`Vector ${op}: ${out.textContent}`);
+            });
+        }
+
+        // Función para manejar el historial
+        function setupHistory() {
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
+            const historyList = document.getElementById('history-list');
+
+            // Cargar historial desde localStorage
+            function loadHistory() {
+                const history = JSON.parse(localStorage.getItem('calculatorHistory')) || [];
+                historyList.innerHTML = '';
+
+                if (history.length === 0) {
+                    historyList.innerHTML = '<p class="text-gray-500 text-sm italic">No hay operaciones en el historial.</p>';
+                    return;
+                }
+
+                history.forEach((entry, index) => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'p-2 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer';
+                    historyItem.innerHTML = `<div class="text-sm text-gray-500">${entry.timestamp}</div>,<div>${entry.operation}</div>`;
+
+                    historyItem.addEventListener('click', () => {
+                        // Aquí se implementaría la lógica para cargar la operación nuevamente
+                        // Por simplicidad, solo mostramos un mensaje en la calculadora
+                        document.querySelector('.calc-display').textContent = entry.operation;
+                    });
+
+                    historyList.appendChild(historyItem);
+                });
+            }
+
+            // Agregar una entrada al historial
+            window.addToHistory = function (operation) {
+                const history = JSON.parse(localStorage.getItem('calculatorHistory')) || [];
+                const now = new Date();
+                const timestamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                history.unshift({
+                    timestamp,
+                    operation
+                });
+
+                // Mantener un tamaño máximo para el historial
+                if (history.length > 50) {
+                    history.pop();
+                }
+
+                localStorage.setItem('calculatorHistory', JSON.stringify(history));
+                loadHistory();
+            };
+
+            // Limpiar historial
+            clearHistoryBtn.addEventListener('click', function () {
+                localStorage.removeItem('calculatorHistory');
+                loadHistory();
+            });
+
+            // Cargar historial inicialmente
+            loadHistory();
+        }
+
+        // Función para configurar el modal de ayuda
+        function setupHelpModal() {
+            const helpBtn = document.getElementById('help-btn');
+            const helpModal = document.getElementById('help-modal');
+            const closeHelpBtn = document.getElementById('close-help');
+
+            helpBtn.addEventListener('click', function () {
+                helpModal.classList.remove('hidden');
+            });
+
+            closeHelpBtn.addEventListener('click', function () {
+                helpModal.classList.add('hidden');
+            });
+
+            // Cerrar modal al hacer clic fuera
+            helpModal.addEventListener('click', function (event) {
+                if (event.target === helpModal) {
+                    helpModal.classList.add('hidden');
+                }
+            });
+        }
+
+        // Setup for symbolic calculator
+        function setupSymbolicCalculator() {
+            const btn = document.getElementById('compute-symbolic');
+            const input = document.getElementById('symbolic-input');
+            const select = document.getElementById('symbolic-operation');
+            const resultD = document.getElementById('symbolic-result');
+            const stepsD = document.getElementById('symbolic-steps');
+            const spinner = document.getElementById('loading-spinner');
+
+            btn.addEventListener('click', () => {
+                const expr = input.value.trim();
+                if (!expr) return;
+
+                spinner.style.display = 'block';
+                resultD.innerHTML = '';
+                stepsD.innerHTML = '';
+
+                let resultLatex = '';
+                let resultText = '';
+
+                try {
+                    if (select.value === 'integrate') {
+                        const res = nerdamer.integrate(expr, 'x');
+                        resultText = res.text();
+                        resultLatex = res.toTeX();
+                    } else if (select.value === 'differentiate') {
+                        const res = nerdamer.diff(expr, 'x');
+                        resultText = res.text();
+                        resultLatex = res.toTeX();
+                    } else if (select.value === 'simplify') {
+                        const res = nerdamer(expr).expand();
+                        resultText = res.text();
+                        resultLatex = res.toTeX();
+                    } else if (select.value === 'solve') {
+                        const res = nerdamer.solve(expr, 'x');
+                        if (res && res.symbol && res.symbol.elements && res.symbol.elements.length > 0) {
+                            resultText = res.text();
+                            resultLatex = res.symbol.elements.map(e => nerdamer(e).toTeX()).join(', ');
+                        } else if (Array.isArray(res) && res.length > 0) {
+                            resultText = res.toString();
+                            resultLatex = res.map(e => nerdamer(e).toTeX()).join(', ');
+                        } else {
+                            resultText = '';
+                            resultLatex = '';
+                        }
+                    }
+                } catch (e) {
+                    resultText = 'Error: ' + e;
+                    resultLatex = '';
+                }
+
+                spinner.style.display = 'none';
+                if (resultLatex && resultLatex !== "undefined" && resultLatex !== "") {
+                    resultD.innerHTML = `<span class="font-mono text-blue-600">\\(${resultLatex}\\)</span>`;
+                } else if (resultText && resultText !== "undefined" && resultText !== "") {
+                    resultD.innerHTML = `<span class="font-mono text-blue-600">${resultText}</span>`;
+                } else {
+                    resultD.innerHTML = `<span class="text-red-500">No se pudo obtener un resultado simbólico.</span>`;
+                }
+                if (window.MathJax) {
+                    MathJax.typesetPromise([resultD]);
+                }
+                stepsD.innerHTML = '';
+                addToHistory(`${select.options[select.selectedIndex].text}: ${expr}`);
+            });
+        }
+
+        // Setup for Plot2D
+        function setupPlot2D() {
+            const typeSel = document.getElementById('chart-type');
+            const dataInput = document.getElementById('chart-data');
+            const ctx = document.getElementById('plot2d-canvas').getContext('2d');
+            let chart;
+
+            // default sample
+            dataInput.value = '1,3,2,5,4';
+
+            function parseData(raw) {
+                try {
+                    // try JSON
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr) && arr.length && typeof arr[0] === 'object') {
+                        return arr;
+                    }
+                } catch (e) { }
+                // fallback CSV
+                return raw.split(',').map((v, i) => ({ x: i + 1, y: parseFloat(v) || 0 }));
+            }
+
+            function buildConfig() {
+                const dataset = parseData(dataInput.value);
+                const chartType = typeSel.value;
+                const common = { label: 'Serie 1', data: dataset, borderColor: 'var(--primary-color)', backgroundColor: 'var(--secondary-color)', fill: false };
+                // Mixed example: line + bar
+                if (chartType === 'mixed') {
+                    return {
+                        type: 'bar',
+                        data: { datasets: [common, { ...common, type: 'line', data: dataset }] },
+                    };
+                }
+                return {
+                    type: chartType,
+                    data: { datasets: [common] },
+                };
+            }
+
+            function renderChart() {
+                const cfg = buildConfig();
+                if (chart) chart.destroy();
+                chart = new Chart(ctx, {
+                    ...cfg,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { type: 'linear', position: 'bottom' } },
+                        plugins: {
+                            zoom: { // if zoom plugin loaded
+                                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }
+                            },
+                            legend: { labels: { color: 'var(--text-color)' } }
+                        },
+                        animation: { duration: 300 },
+                    }
+                });
+            }
+
+            // event listeners
+            [typeSel, dataInput].forEach(el => el.addEventListener('change', renderChart));
+            // initial draw
+            renderChart();
+        }
+
+        // Setup for Plot3D interactive graphs
+        function setupPlot3D() {
+            const typeSel = document.getElementById('plot3d-type');
+            const dataInput = document.getElementById('plot3d-data');
+            const colorPick = document.getElementById('plot3d-color');
+            const gridChk = document.getElementById('plot3d-grid');
+            const btn = document.getElementById('plot3d-btn');
+            const container = document.getElementById('plot3d-container');
+            const errDiv = document.getElementById('plot3d-error');
+
+            // Forzar tamaño explícito
+            container.style.height = '400px';
+            container.style.width = '100%';
+
+            const panel = document.getElementById('plot3d-panel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+            }
+
+            btn.addEventListener('click', () => {
+                errDiv.textContent = '';
+                let rows;
+                try {
+                    // parse CSV into array of {x,y,z}
+                    rows = dataInput.value.trim().split('\n').map(line => {
+                        const parts = line.split(',');
+                        if (parts.length !== 3) throw 'Cada línea debe tener 3 valores separados por comas';
+                        const [x, y, z] = parts.map(Number);
+                        if ([x, y, z].some(v => isNaN(v))) throw 'Valores no numéricos detectados';
+                        return { x, y, z };
+                    });
+                } catch (e) {
+                    errDiv.textContent = `Error al parsear CSV: ${e}`;
+                    return;
+                }
+
+                // build trace based on type
+                let trace;
+                const color = colorPick.value;
+                const showGrid = gridChk.checked;
+                if (typeSel.value === 'line3d') {
+                    trace = {
+                        x: rows.map(r => r.x),
+                        y: rows.map(r => r.y),
+                        z: rows.map(r => r.z),
+                        mode: 'lines',
+                        type: 'scatter3d',
+                        line: { color: color, width: 4 },
+                    };
+                }
+                else if (typeSel.value === 'surface3d') {
+                    // for surface, build square grid
+                    const n2 = rows.length;
+                    const size = Math.sqrt(n2);
+                    if (!Number.isInteger(size) || size < 2) {
+                        errDiv.textContent = 'Para superficie 3D, los datos deben formar una cuadrícula n×n válida';
+                        return;
+                    }
+                    const zData = [];
+                    for (let i = 0; i < size; i++) {
+                        zData.push(rows.slice(i * size, i * size + size).map(r => r.z));
+                    }
+                    trace = {
+                        z: zData,
+                        type: 'surface',
+                        colorscale: [[0, color], [1, color]],
+                        showscale: false
+                    };
+                }
+                else if (typeSel.value === 'scatter3d') {
+                    trace = {
+                        x: rows.map(r => r.x),
+                        y: rows.map(r => r.y),
+                        z: rows.map(r => r.z),
+                        mode: 'markers',
+                        type: 'scatter3d',
+                        marker: { color: color, size: 6 }
+                    };
+                } else {
+                    errDiv.textContent = 'Tipo de gráfico no soportado';
+                    return;
+                }
+
+                const layout = {
+                    margin: { l: 10, r: 10, b: 10, t: 10 },  // small padding to avoid clipping
+                    scene: {
+                        xaxis: { showgrid: showGrid },
+                        yaxis: { showgrid: showGrid },
+                        zaxis: { showgrid: showGrid },
+                        // start with a reasonable camera angle
+                        camera: {
+                            eye: { x: 1.5, y: 1.5, z: 1.2 }
+                        }
+                    }
+                };
+
+                // render with Plotly
+                const config = {
+                    responsive: true,
+                    displayModeBar: true,
+                    modeBarButtonsToAdd: [
+                        'zoom3d', 'pan3d', 'orbitRotation', 'resetCameraDefault'
+                    ],
+                    scrollZoom: true
+                };
+                Plotly.newPlot(container, [trace], layout, config);
+                setTimeout(() => Plotly.Plots.resize(container), 100);
+            });
+
+            // Redibujar al mostrar el panel
+            document.querySelector('[data-tab="plot3d"]').addEventListener('click', () => {
+                setTimeout(() => {
+                    Plotly.Plots.resize(document.getElementById('plot3d-container'));
+                    // Si ya hay datos, fuerza el click del botón para redibujar
+                    const btn = document.getElementById('plot3d-btn');
+                    if (btn && document.getElementById('plot3d-data').value.trim()) {
+                        btn.click();
+                    }
+                }, 200);
+            });
+        }
+
+        // Función para configurar la calculadora de sistemas de ecuaciones
+        function setupSystemsCalculator() {
+            const input = document.createElement('textarea');
+            input.id = 'systems-input';
+            input.rows = 4;
+            input.className = 'w-full p-2 border rounded mb-2 font-mono';
+            input.placeholder = 'Ejemplo:\n2x + y = 5\nx - y = 1';
+
+            const btn = document.createElement('button');
+            btn.id = 'systems-solve-btn';
+            btn.className = 'w-full p-2 bg-green-500 text-white rounded mb-2';
+            btn.textContent = 'Resolver sistema';
+
+            // NUEVO: Botones adicionales
+            const btnDet = document.createElement('button');
+            btnDet.className = 'w-full p-2 bg-blue-500 text-white rounded mb-2';
+            btnDet.textContent = 'Determinante de la matriz de coeficientes';
+
+            const btnRank = document.createElement('button');
+            btnRank.className = 'w-full p-2 bg-purple-500 text-white rounded mb-2';
+            btnRank.textContent = 'Rango de la matriz de coeficientes';
+
+            const btnAugRank = document.createElement('button');
+            btnAugRank.className = 'w-full p-2 bg-indigo-500 text-white rounded mb-2';
+            btnAugRank.textContent = 'Rango de la matriz aumentada';
+
+            const btnCheck = document.createElement('button');
+            btnCheck.className = 'w-full p-2 bg-yellow-500 text-white rounded mb-2';
+            btnCheck.textContent = '¿Sistema compatible?';
+
+            const resultDiv = document.createElement('div');
+            resultDiv.id = 'systems-result';
+            resultDiv.className = 'mt-2 p-3 border rounded bg-gray-50 dark:bg-gray-700 min-h-16';
+
+            const panel = document.getElementById('systems-panel');
+            if (!panel) {
+                console.error('Panel de sistemas no encontrado');
+                return;
+            }
+            // Ejemplos de sistemas para pruebas rápidas
+            const ejemplosDiv = document.createElement('div');
+            ejemplosDiv.className = 'mb-2 flex flex-wrap gap-2';
+
+            const btnEjemploLineal = document.createElement('button');
+            btnEjemploLineal.className = 'p-2 bg-gray-200 dark:bg-gray-700 rounded text-sm';
+            btnEjemploLineal.textContent = 'Ejemplo Lineal';
+            btnEjemploLineal.title = 'Carga un sistema lineal 2x2';
+            btnEjemploLineal.onclick = () => {
+                input.value = '2x + y = 5\nx - y = 1';
+            };
+
+            const btnEjemploNoLineal = document.createElement('button');
+            btnEjemploNoLineal.className = 'p-2 bg-gray-200 dark:bg-gray-700 rounded text-sm';
+            btnEjemploNoLineal.textContent = 'Ejemplo No Lineal';
+            btnEjemploNoLineal.title = 'Carga un sistema no lineal 2x2';
+            btnEjemploNoLineal.onclick = () => {
+                input.value = 'x^2 + y^2 = 5\nx - y = 1';
+            };
+
+            ejemplosDiv.appendChild(btnEjemploLineal);
+            ejemplosDiv.appendChild(btnEjemploNoLineal);
+
+            // Inserta los botones de ejemplo antes del textarea
+            panel.innerHTML = '';
+            panel.appendChild(ejemplosDiv);
+            panel.appendChild(input);
+            panel.appendChild(btn);
+            panel.appendChild(btnDet);
+            panel.appendChild(btnRank);
+            panel.appendChild(btnAugRank);
+            panel.appendChild(btnCheck);
+            panel.appendChild(resultDiv);
+
+            // Función para obtener matrices A y b y variables
+            function getSystemMatrices() {
+                const lines = input.value.trim().split('\n').filter(l => l.trim());
+                if (lines.length < 2) return null;
+                const vars = Array.from(new Set(lines.join(' ').match(/[a-zA-Z]+/g)));
+                const A = [];
+                const b = [];
+                for (const eq of lines) {
+                    let [left, right] = eq.split('=');
+                    if (typeof right === 'undefined') throw 'Cada ecuación debe tener un "="';
+                    left = left.trim();
+                    right = right.trim();
+                    const expr = math.parse(left + '-(' + right + ')');
+                    const coeffRow = vars.map(v => {
+                        let temp = expr;
+                        vars.forEach(w => {
+                            if (w !== v) temp = temp.transform(node =>
+                                node.isSymbolNode && node.name === w ? new math.ConstantNode(0) : node
+                            );
+                        });
+                        const deriv = math.derivative(temp, v);
+                        return deriv.evaluate(vars.reduce((acc, w) => (acc[w] = 0, acc), {}));
+                    });
+                    let temp = expr;
+                    vars.forEach(w => temp = temp.transform(node =>
+                        node.isSymbolNode && node.name === w ? new math.ConstantNode(0) : node
+                    ));
+                    const constTerm = -temp.evaluate(vars.reduce((acc, w) => (acc[w] = 0, acc), {}));
+                    A.push(coeffRow);
+                    b.push(constTerm);
+                }
+                return { A, b, vars };
+            }
+
+            btn.addEventListener('click', () => {
+                resultDiv.innerHTML = '';
+                if (typeof math === 'undefined') {
+                    resultDiv.innerHTML = '<span class="text-red-500">math.js no está disponible.</span>';
+                    return;
+                }
+                let matrices;
+                try {
+                    matrices = getSystemMatrices();
+                    if (!matrices) {
+                        resultDiv.innerHTML = '<span class="text-red-500">Ingrese al menos dos ecuaciones.</span>';
+                        return;
+                    }
+                    const { A, b, vars } = matrices;
+                    // Verificar si la matriz de coeficientes es numérica (lineal)
+                    const isLinear = A.every(row => row.every(x => typeof x === 'number' && isFinite(x)));
+                    if (!isLinear) {
+                        resultDiv.innerHTML = `<span class="text-red-500">El sistema no es lineal. Use el módulo simbólico para resolver sistemas no lineales.</span>`;
+                        return;
+                    }
+                    const sol = math.lusolve(A, b);
+                    let latex = vars.map((v, i) => `${v} = ${math.format(sol[i][0], { precision: 8 })}`).join('<br>');
+                    resultDiv.innerHTML = `<span class="font-mono text-blue-600">${latex}</span>`;
+                    if (window.MathJax) MathJax.typesetPromise([resultDiv]);
+                } catch (e) {
+                    resultDiv.innerHTML = `<span class="text-red-500">Error: ${e}</span>`;
+                }
+            });
+
+            // Determinante
+            btnDet.addEventListener('click', () => {
+                resultDiv.innerHTML = '';
+                try {
+                    const matrices = getSystemMatrices();
+                    if (!matrices) {
+                        resultDiv.innerHTML = '<span class="text-red-500">Ingrese al menos dos ecuaciones.</span>';
+                        return;
+                    }
+                    const det = math.det(matrices.A);
+                    resultDiv.innerHTML = `<span class="font-mono text-blue-600">Determinante: ${det}</span>`;
+                } catch (e) {
+                    resultDiv.innerHTML = `<span class="text-red-500">Error: ${e}</span>`;
+                }
+            });
+
+            // Rango de la matriz de coeficientes
+            function matrixRank(matrix) {
+                const m = matrix.map(row => row.slice()); // Copia profunda
+                const rows = m.length;
+                const cols = m[0].length;
+                let rank = 0;
+                const EPS = 1e-10;
+                let rowUsed = Array(rows).fill(false);
+
+                for (let col = 0; col < cols; col++) {
+                    let sel = -1;
+                    for (let row = 0; row < rows; row++) {
+                        if (!rowUsed[row] && Math.abs(m[row][col]) > EPS) {
+                            sel = row;
+                            break;
+                        }
+                    }
+                    if (sel === -1) continue;
+                    rowUsed[sel] = true;
+                    for (let row = 0; row < rows; row++) {
+                        if (row !== sel) {
+                            const factor = m[row][col] / m[sel][col];
+                            for (let k = col; k < cols; k++) m[row][k] -= factor * m[sel][k];
+                        }
+                    }
+                    rank++;
+                }
+                return rank;
+            }
+
+            btnRank.addEventListener('click', () => {
+                resultDiv.innerHTML = '';
+                try {
+                    const matrices = getSystemMatrices();
+                    if (!matrices) {
+                        resultDiv.innerHTML = '<span class="text-red-500">Ingrese al menos dos ecuaciones.</span>';
+                        return;
+                    }
+                    const rank = matrixRank(matrices.A);
+                    resultDiv.innerHTML = `<span class="font-mono text-blue-600">Rango de la matriz de coeficientes: ${rank}</span>`;
+                } catch (e) {
+                    resultDiv.innerHTML = `<span class="text-red-500">Error: ${e}</span>`;
+                }
+            });
+
+            // Rango de la matriz aumentada
+            btnAugRank.addEventListener('click', () => {
+                resultDiv.innerHTML = '';
+                try {
+                    const matrices = getSystemMatrices();
+                    if (!matrices) {
+                        resultDiv.innerHTML = '<span class="text-red-500">Ingrese al menos dos ecuaciones.</span>';
+                        return;
+                    }
+                    // Matriz aumentada
+                    const aug = matrices.A.map((row, i) => [...row, matrices.b[i]]);
+                    const rank = matrixRank(aug);
+                    resultDiv.innerHTML = `<span class="font-mono text-blue-600">Rango de la matriz aumentada: ${rank}</span>`;
+                } catch (e) {
+                    resultDiv.innerHTML = `<span class="text-red-500">Error: ${e}</span>`;
+                }
+            });
+
+            // Compatibilidad del sistema
+            btnCheck.addEventListener('click', () => {
+                resultDiv.innerHTML = '';
+                try {
+                    const matrices = getSystemMatrices();
+                    if (!matrices) {
+                        resultDiv.innerHTML = '<span class="text-red-500">Ingrese al menos dos ecuaciones.</span>';
+                        return;
+                    }
+                    const rankA = matrixRank(matrices.A);
+                    const aug = matrices.A.map((row, i) => [...row, matrices.b[i]]);
+                    const rankAug = matrixRank(aug);
+                    const nVars = matrices.vars.length;
+                    let msg = '';
+                    if (rankA === rankAug) {
+                        if (rankA === nVars) {
+                            msg = 'Sistema compatible determinado (solución única)';
+                        } else {
+                            msg = 'Sistema compatible indeterminado (infinitas soluciones)';
+                        }
+                    } else {
+                        msg = 'Sistema incompatible (no tiene solución)';
+                    }
+                    resultDiv.innerHTML = `<span class="font-mono text-blue-600">${msg}</span>`;
+                } catch (e) {
+                    resultDiv.innerHTML = `<span class="text-red-500">Error: ${e}</span>`;
+                }
+            });
+        }
+
+        // Inicializar todas las funcionalidades
+        document.addEventListener('DOMContentLoaded', function () {
+            setupDropdown();
+            setupThemeSelector();
+            setupFontSizeSelector();
+            setupTabs();
+            setupBasicCalculator();
+            setupMatrixCalculator();
+            setupPolynomialCalculator();
+            setupVectorCalculator();
+            setupHistory();
+            setupHelpModal();
+            setupSymbolicCalculator();
+            setupSystemsCalculator();
+            setupPlot2D();
+            setupPlot3D();       // <-- initialize the new 3D module
+        });
+    </script>
+</body>
+
+</html>

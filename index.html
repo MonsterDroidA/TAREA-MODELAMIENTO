@@ -1285,9 +1285,17 @@
                 }
 
                 spinner.style.display = 'none';
-                polyResultDiv.innerHTML = `<span class="font-mono text-blue-600">${result}</span><br><span class="font-mono text-blue-600">\\(${latex}\\)</span>`;
-                if (window.MathJax) {
-                    MathJax.typesetPromise([polyResultDiv]);
+                // Mostrar siempre el resultado como texto plano y, si hay LaTeX, también en LaTeX
+                if ((result && result !== "undefined" && result !== "") || (latex && latex !== "undefined" && latex !== "")) {
+                    polyResultDiv.innerHTML = `
+        <div class="mb-2"><span class="font-mono text-blue-600">${result || '(sin resultado en texto)'}</span></div>
+        ${latex && latex !== "undefined" && latex !== "" ? `<div><span class="font-mono text-blue-600">\\(${latex}\\)</span></div>` : ''}
+    `;
+                    if (window.MathJax && latex && latex !== "undefined" && latex !== "") {
+                        MathJax.typesetPromise([polyResultDiv]);
+                    }
+                } else {
+                    polyResultDiv.innerHTML = `<span class="text-red-500">No se pudo obtener un resultado simbólico.</span>`;
                 }
                 addToHistory(`Polinomio: ${latex}`);
             });
@@ -1466,15 +1474,17 @@
                 }
 
                 spinner.style.display = 'none';
-                if (resultLatex && resultLatex !== "undefined" && resultLatex !== "") {
-                    resultD.innerHTML = `<span class="font-mono text-blue-600">\\(${resultLatex}\\)</span>`;
-                } else if (resultText && resultText !== "undefined" && resultText !== "") {
-                    resultD.innerHTML = `<span class="font-mono text-blue-600">${resultText}</span>`;
+                // Mostrar siempre el resultado como texto plano y, si hay LaTeX, también en LaTeX
+                if ((resultText && resultText !== "undefined" && resultText !== "") || (resultLatex && resultLatex !== "undefined" && resultLatex !== "")) {
+                    resultD.innerHTML = `
+        <div class="mb-2"><span class="font-mono text-blue-600">${resultText || '(sin resultado en texto)'}</span></div>
+        ${resultLatex && resultLatex !== "undefined" && resultLatex !== "" ? `<div><span class="font-mono text-blue-600">\\(${resultLatex}\\)</span></div>` : ''}
+    `;
+                    if (window.MathJax && resultLatex && resultLatex !== "undefined" && resultLatex !== "") {
+                        MathJax.typesetPromise([resultD]);
+                    }
                 } else {
                     resultD.innerHTML = `<span class="text-red-500">No se pudo obtener un resultado simbólico.</span>`;
-                }
-                if (window.MathJax) {
-                    MathJax.typesetPromise([resultD]);
                 }
                 stepsD.innerHTML = '';
                 addToHistory(`${select.options[select.selectedIndex].text}: ${expr}`);
